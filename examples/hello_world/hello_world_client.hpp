@@ -32,6 +32,8 @@ public:
     }
 
     bool init(){
+        // test new commit
+        
         // init the application
         if (!app_->init()) {
             LOG_ERR ("Couldn't initialize application");
