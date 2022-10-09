@@ -33,7 +33,7 @@ public:
 
     bool init(){
         // test new commit
-        
+        // another
         // init the application
         if (!app_->init()) {
             LOG_ERR ("Couldn't initialize application");
@@ -80,6 +80,9 @@ public:
     void on_availability_cbk(vsomeip::service_t _service,
             vsomeip::instance_t _instance, bool _is_available)
     {
+        if (_is_available) LOG_INF("service 0x%x, instance 0x%x is available", _service, _instance);
+        else LOG_INF("service 0x%x, instance 0x%x is not available", _service, _instance);
+
         // Check if the available service is the the hello world service
         if(service_id == _service && service_instance_id == _instance
                 && _is_available)
@@ -120,7 +123,7 @@ public:
                     reinterpret_cast<const char*>(pl->get_data()), 0,
                     pl->get_length());
             LOG_INF("Received: %s", resp.c_str());
-            stop();
+            //stop();
         }
     }
 

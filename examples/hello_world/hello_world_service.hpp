@@ -76,6 +76,7 @@ public:
         std::unique_lock<std::mutex> its_lock(mutex_);
         while(!stop_) {
             condition_.wait(its_lock);
+
         }
         std::this_thread::sleep_for(std::chrono::seconds(5));
         // Stop offering the service
@@ -124,7 +125,7 @@ public:
         // Send the response back
         app_->send(resp);
         // we have finished
-        terminate();
+        //terminate();
     }
 
 private:
