@@ -1,0 +1,13 @@
+1. generate code from .fidl, fdepl
+tai@tai:~/work/vsomeip/examples/hello_world_commonAPI$ ./../../../commonapi_core_generator/commonapi-core-generator-linux-x86_64 -sk fidl/E01HelloWorld.fidl
+tai@tai:~/work/vsomeip/examples/hello_world_commonAPI$ ./../../../commonapi_someip_generator/commonapi-someip-generator-linux-x86_64 fidl/E01HelloWorld-SomeIP.fdepl
+
+=> src-gen: generated code 
+
+2. write CMakeLists.txt
+
+3. build
+mkdir build
+cd build
+cmake ..
+make
