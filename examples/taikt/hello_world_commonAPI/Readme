@@ -1,0 +1,56 @@
+Refer:
+examples using commonAPI
+https://github.com/COVESA/capicxx-core-tools/tree/master/CommonAPI-Examples
+https://usermanual.wiki/Document/CommonAPICppUserGuide.113855339.pdf
+
+
+1. install libs
+-- install commonAPI lib
+git clone git@github.com:COVESA/capicxx-core-runtime.git
+cd capicxx-core-runtime
+mkdir build
+cd build
+make
+(optional: sudo make install)
+
+-- install commonAPI-someip lib
+git clone git@github.com:COVESA/capicxx-someip-runtime.git
+cd capicxx-someip-runtime
+mkdir build
+cd build
+make
+(optional: sudo make install)
+
+-- install vsomeip lib
+git clone git@github.com:taikt/vsomeip.git
+cd vsomeip
+mkdir build
+cd build
+make
+(optional: sudo make install)
+
+1. generate code from .fidl, fdepl
+download commonapi_core_generator
+https://github.com/COVESA/capicxx-core-tools/releases
+
+donwload someip generator
+https://github.com/COVESA/capicxx-someip-tools/releases
+
+tai@tai:~/work/vsomeip/examples/taikt/hello_world_commonAPI$ ./../../../commonapi_core_generator/commonapi-core-generator-linux-x86_64 -sk fidl/E01HelloWorld.fidl
+tai@tai:~/work/vsomeip/examples/taikt/hello_world_commonAPI$ ./../../../commonapi_someip_generator/commonapi-someip-generator-linux-x86_64 fidl/E01HelloWorld-SomeIP.fdepl
+
+=> src-gen: generated code 
+
+2. write CMakeLists.txt
+
+3. build
+mkdir build
+cd build
+cmake ..
+make
+
+(can skip this step if libraries are installed in /usr/local/lib) (add to ~/.profile for default) 
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data001/tai2.tran/vsomeip/build
+
+vsomeip/examples/hello_world_commonAPI/build$ ./HelloWorldService
+vsomeip/examples/hello_world_commonAPI/build$ ./HelloWorldClient

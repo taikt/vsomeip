@@ -1,0 +1,10 @@
+taikt/E03Methods$ ./../../../../someip-gen-tools/gen-tools/commonapi_core_generator/commonapi-core-generator-linux-x86_64 -sk fidl/E03Methods.fidl
+taikt/E03Methods$ ./../../../../someip-gen-tools/gen-tools/commonapi_someip_generator/commonapi-someip-generator-linux-x86_64 fidl/E03Methods-SomeIP.fdepl
+
+mkdir build
+cd build
+cmake ..
+make
+
+./E03MethodsService
+./E03MethodsClient

@@ -10,7 +10,8 @@
 #include <unistd.h>
 #endif
 
-#include <CommonAPI-3.2/CommonAPI/CommonAPI.hpp>
+//#include <CommonAPI-3.2/CommonAPI/CommonAPI.hpp>
+#include <CommonAPI/CommonAPI.hpp>
 #include <v0/commonapi/examples/E01HelloWorldProxy.hpp>
 
 using namespace v0::commonapi::examples;
