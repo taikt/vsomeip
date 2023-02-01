@@ -22,6 +22,8 @@
 #undef HAS_DEFINED_COMMONAPI_INTERNAL_COMPILATION_HERE
 #endif
 
+#include "debug.hpp"
+
 namespace v1 {
 namespace commonapi {
 namespace examples {
@@ -30,10 +32,12 @@ std::shared_ptr<CommonAPI::SomeIP::StubAdapter> createE03MethodsSomeIPStubAdapte
                    const CommonAPI::SomeIP::Address &_address,
                    const std::shared_ptr<CommonAPI::SomeIP::ProxyConnection> &_connection,
                    const std::shared_ptr<CommonAPI::StubBase> &_stub) {
+    DEBUG_MSG();
     return std::make_shared< E03MethodsSomeIPStubAdapter<::v1::commonapi::examples::E03MethodsStub>>(_address, _connection, _stub);
 }
 
 void initializeE03MethodsSomeIPStubAdapter() {
+    DEBUG_MSG();
     CommonAPI::SomeIP::AddressTranslator::get()->insert(
         "local:commonapi.examples.E03Methods:v1_2:commonapi.examples.Methods",
          0x1234, 0x5678, 1, 2);
@@ -43,6 +47,7 @@ void initializeE03MethodsSomeIPStubAdapter() {
 }
 
 INITIALIZER(registerE03MethodsSomeIPStubAdapter) {
+    DEBUG_MSG();
     CommonAPI::SomeIP::Factory::get()->registerInterface(initializeE03MethodsSomeIPStubAdapter);
 }
 

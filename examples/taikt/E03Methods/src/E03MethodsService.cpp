@@ -9,6 +9,8 @@
 #include <CommonAPI/CommonAPI.hpp>
 #include "E03MethodsStubImpl.hpp"
 
+#include "debug.hpp"
+
 int main() {
     CommonAPI::Runtime::setProperty("LogContext", "E03S");
     CommonAPI::Runtime::setProperty("LogApplication", "E03S");
@@ -20,6 +22,8 @@ int main() {
     std::string instance = "commonapi.examples.Methods";
 
     std::shared_ptr<E03MethodsStubImpl> myService = std::make_shared<E03MethodsStubImpl>();
+	
+	DEBUG_MSG();
     while (!runtime->registerService(domain, instance, myService, "service-sample")) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }

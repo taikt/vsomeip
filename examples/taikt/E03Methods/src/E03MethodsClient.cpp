@@ -39,9 +39,13 @@ int main() {
 
     std::shared_ptr<E03MethodsProxy<>> myProxy = runtime->buildProxy < E03MethodsProxy > (domain, instance, "client-sample");
 
+    std::cout<<"taikt test\n";
     while (!myProxy->isAvailable()) {
         std::this_thread::sleep_for(std::chrono::microseconds(10));
+        //std::cout<<"service is not available\n";
     }
+
+    std::cout<<"taikt proxy is available\n";
 
     // Subscribe to broadcast
     myProxy->getMyStatusEvent().subscribe([&](const int32_t& val) {

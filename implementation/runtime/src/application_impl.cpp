@@ -37,6 +37,8 @@
 #include "../../endpoints/include/endpoint.hpp"
 #include "../../security/include/security.hpp"
 
+#include "debug.hpp"
+
 namespace vsomeip_v3 {
 
 #ifdef ANDROID
@@ -1192,6 +1194,7 @@ void application_impl::unregister_subscription_status_handler(service_t _service
 
 void application_impl::register_message_handler(service_t _service,
         instance_t _instance, method_t _method, message_handler_t _handler) {
+    DEBUG_MSG();
     std::lock_guard<std::mutex> its_lock(members_mutex_);
     members_[_service][_instance][_method] = _handler;
 }
@@ -1549,6 +1552,7 @@ void application_impl::on_message(std::shared_ptr<message> &&_message) {
                 auto handler = its_handler.handler_;
                 std::shared_ptr<sync_handler> its_sync_handler =
                         std::make_shared<sync_handler>([handler, _message]() {
+                            DEBUG_MSG();
                             handler(_message);
                         });
                 its_sync_handler->handler_type_ = handler_type_e::MESSAGE;

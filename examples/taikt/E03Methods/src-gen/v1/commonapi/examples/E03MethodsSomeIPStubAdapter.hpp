@@ -30,6 +30,8 @@
 #undef HAS_DEFINED_COMMONAPI_INTERNAL_COMPILATION_HERE
 #endif
 
+#include "debug.hpp"
+
 namespace v1 {
 namespace commonapi {
 namespace examples {
@@ -83,9 +85,11 @@ public:
             std::make_tuple(static_cast< ::v1::commonapi::examples::E03Methods_::stdErrorTypeEnumDeployment_t * >(nullptr), static_cast< CommonAPI::SomeIP::IntegerDeployment<int32_t>* >(nullptr), &::v1::commonapi::examples::E03Methods_::foo_y2Deployment))
         
     {
+        DEBUG_MSG();
         E03MethodsSomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7530) }, &fooStubDispatcher );
         // Provided events/fields
         {
+            DEBUG_MSG();
             std::set<CommonAPI::SomeIP::eventgroup_id_t> itsEventGroups;
             itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x80f2));
             CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x80f2), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
@@ -114,10 +118,12 @@ void E03MethodsSomeIPStubAdapterInternal<_Stub, _Stubs...>::fireMyStatusEvent(co
 
 template <typename _Stub, typename... _Stubs>
 void E03MethodsSomeIPStubAdapterInternal<_Stub, _Stubs...>::registerSelectiveEventHandlers() {
+    DEBUG_MSG();
 }
 
 template <typename _Stub, typename... _Stubs>
 void E03MethodsSomeIPStubAdapterInternal<_Stub, _Stubs...>::unregisterSelectiveEventHandlers() {
+    DEBUG_MSG();
 }
 
 template <typename _Stub = ::v1::commonapi::examples::E03MethodsStub, typename... _Stubs>
@@ -129,6 +135,7 @@ public:
                                             const std::shared_ptr<CommonAPI::StubBase> &_stub)
         : CommonAPI::SomeIP::StubAdapter(_address, _connection),
           E03MethodsSomeIPStubAdapterInternal<_Stub, _Stubs...>(_address, _connection, _stub) {
+            DEBUG_MSG();
     }
 };
 
