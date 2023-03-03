@@ -341,6 +341,10 @@ bool application_impl::init() {
         std::exit(EXIT_FAILURE);
     }
 
+	// debug
+	VSOMEIP_INFO << "[taikt] max dispatchers:" << max_dispatchers_ << "\n";
+        
+
     return is_initialized_;
 }
 
