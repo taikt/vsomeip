@@ -116,3 +116,7 @@ PRODUCT_PACKAGES += \
     libvsomeip_cfg \
     libvsomeip_sd
 ```
+
+###### taikt
+online document: 
+http://imsweb.club/share/vsomeipdoc/index.html

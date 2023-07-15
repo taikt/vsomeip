@@ -1629,6 +1629,9 @@ void application_impl::main_dispatch() {
     its_lock.unlock();
 }
 
+// taikt: this function is call by a child thread in pool
+// when an api call exceed timeout, a child thread running dispatch() is created.
+// after finish job (no pending handlers on queue), this thread is exited.
 void application_impl::dispatch() {
 #ifndef _WIN32
     {
@@ -1651,6 +1654,9 @@ void application_impl::dispatch() {
         if (is_dispatching_ && handlers_.empty()) {
              dispatcher_condition_.wait(its_lock);
              // Maybe woken up from main dispatcher
+
+			 // taikt: is_active_dispatcher() return true if thread is not running job or not an elapsed dispatcher.
+			 // return fail if either thread is running a job or a elapsed dispatcher (just done job)
              if (handlers_.empty() && !is_active_dispatcher(its_id)) {
                  if (!is_dispatching_) {
                      return;
@@ -1661,6 +1667,8 @@ void application_impl::dispatch() {
              }
         } else {
             std::shared_ptr<sync_handler> its_handler;
+			// taikt: is_active_dispatcher() return true if thread is not running job or not an elapsed dispatcher.
+			// return fail if either thread is running a job or a elapsed dispatcher (just done job)
             while (is_dispatching_ && is_active_dispatcher(its_id)
                    && (its_handler = get_next_handler())) {
                 its_lock.unlock();
@@ -1678,6 +1686,8 @@ void application_impl::dispatch() {
     }
     if (is_dispatching_) {
         std::lock_guard<std::mutex> its_lock(dispatcher_mutex_);
+		// taikt: finish running on child thread, mark it as elapsed.
+		// this thread is exited.
         elapsed_dispatchers_.insert(its_id);
     }
     dispatcher_condition_.notify_all();
@@ -1819,7 +1829,9 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
 
     if (is_dispatching_) {
         try {
+			VSOMEIP_INFO << "[taikt] trying to invoke handler start";
             _handler->handler_();
+			VSOMEIP_INFO << "[taikt] trying to invoke handler end";
         } catch (const std::exception &e) {
             VSOMEIP_ERROR << "application_impl::invoke_handler caught exception: "
                     << e.what();
@@ -1827,6 +1839,7 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
         }
     }
     boost::system::error_code ec;
+	VSOMEIP_INFO << "[taikt] cancel dispatcher timer";
     its_dispatcher_timer.cancel(ec);
 
     while (is_dispatching_ ) {
@@ -1857,6 +1870,8 @@ bool application_impl::has_active_dispatcher() {
     return false;
 }
 
+// taikt: return true if thread is not running job or not an elapsed dispatcher.
+// return fail if either thread is running a job or a elapsed dispatcher (just done job)
 bool application_impl::is_active_dispatcher(const std::thread::id &_id) {
     while (is_dispatching_) {
         if (dispatcher_mutex_.try_lock()) {

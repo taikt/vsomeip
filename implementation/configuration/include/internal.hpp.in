@@ -80,7 +80,7 @@
 #define VSOMEIP_IO_THREAD_COUNT                 2
 #define VSOMEIP_IO_THREAD_NICE_LEVEL            255
 
-#define VSOMEIP_MAX_DISPATCHERS                 10
+#define VSOMEIP_MAX_DISPATCHERS                 5
 #define VSOMEIP_MAX_DISPATCH_TIME               100
 
 #define VSOMEIP_REQUEST_DEBOUNCE_TIME           10

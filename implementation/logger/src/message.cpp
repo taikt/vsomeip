@@ -8,6 +8,9 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sys/syscall.h>
+
+
 
 #ifdef ANDROID
 #include <android/log.h>
@@ -78,6 +81,7 @@ message::~message() {
         auto its_time = std::localtime(&its_time_t);
         auto its_ms = (when_.time_since_epoch().count() / 100) % 1000000;
 
+		
         if (its_configuration->has_console_log()) {
 #ifndef ANDROID
             std::cout
@@ -88,7 +92,9 @@ message::~message() {
                 << std::dec << std::setw(2) << std::setfill('0') << its_time->tm_min << ":"
                 << std::dec << std::setw(2) << std::setfill('0') << its_time->tm_sec << "."
                 << std::dec << std::setw(6) << std::setfill('0') << its_ms << " ["
-                << its_level << "] "
+				// taikt add thread id in logger
+                << its_level << "] [TID:"
+                << std::dec << static_cast<int>(syscall(SYS_gettid)) << "]"
                 << buffer_.data_.str()
                 << std::endl;
 #else
@@ -117,6 +123,7 @@ message::~message() {
 #endif // !ANDROID
         }
 
+		
         if (its_configuration->has_file_log()) {
             std::ofstream its_logfile(
                     its_configuration->get_logfile(),
@@ -130,7 +137,7 @@ message::~message() {
                     << std::dec << std::setw(2) << std::setfill('0') << its_time->tm_min << ":"
                     << std::dec << std::setw(2) << std::setfill('0') << its_time->tm_sec << "."
                     << std::dec << std::setw(6) << std::setfill('0') << its_ms << " ["
-                    << its_level << "] "
+                    << its_level << "]"
                     << buffer_.data_.str()
                     << std::endl;
             }
