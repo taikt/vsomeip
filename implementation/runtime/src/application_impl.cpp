@@ -1595,6 +1595,7 @@ void application_impl::main_dispatch() {
             ;
     std::unique_lock<std::mutex> its_lock(handlers_mutex_);
     while (is_dispatching_) {
+        // taikt: if queue job is empty or threre is a free dispacher in queue => just waiting main thread, try to awake other free dispatcher
         if (handlers_.empty() || !is_active_dispatcher(its_id)) {
             // Cancel other waiting dispatcher
             dispatcher_condition_.notify_all();
@@ -1602,7 +1603,7 @@ void application_impl::main_dispatch() {
             while (is_dispatching_ && (handlers_.empty() || !is_active_dispatcher(its_id))) {
                 dispatcher_condition_.wait(its_lock);
             }
-        } else {
+        } else { // if queue job is not empty or other worker thread are busy, let main thread to do job
             std::shared_ptr<sync_handler> its_handler;
             while (is_dispatching_  && is_active_dispatcher(its_id)
                    && (its_handler = get_next_handler())) {
@@ -1630,8 +1631,11 @@ void application_impl::main_dispatch() {
 }
 
 // taikt: this function is call by a child thread in pool
-// when an api call exceed timeout, a child thread running dispatch() is created.
-// after finish job (no pending handlers on queue), this thread is exited.
+
+// running_dispatcher: is doing job
+// elapsed_dispatcher: finished job but has not removed, planed to be removed
+// dispachers: all worker threads pool (including running dispatchers, elapsed dispatchers, free(sleeping) dispachers)
+// taikt end
 void application_impl::dispatch() {
 #ifndef _WIN32
     {
@@ -1650,9 +1654,10 @@ void application_impl::dispatch() {
 #endif
             ;
     std::unique_lock<std::mutex> its_lock(handlers_mutex_);
+    // taikt: continue do new job if all other workers are busy
     while (is_active_dispatcher(its_id)) {
         if (is_dispatching_ && handlers_.empty()) {
-             dispatcher_condition_.wait(its_lock);
+             dispatcher_condition_.wait(its_lock); //this worker is sleeping to wait to be wakeuped, which means it is free dispatcher
              // Maybe woken up from main dispatcher
 
 			 // taikt: is_active_dispatcher() return true if thread is not running job or not an elapsed dispatcher.
@@ -1667,8 +1672,10 @@ void application_impl::dispatch() {
              }
         } else {
             std::shared_ptr<sync_handler> its_handler;
-			// taikt: is_active_dispatcher() return true if thread is not running job or not an elapsed dispatcher.
-			// return fail if either thread is running a job or a elapsed dispatcher (just done job)
+
+            // loop to handle job if:
+            // 1. other workers are busy and
+            // 2. queue job is not empty (next_handler != nullptr)
             while (is_dispatching_ && is_active_dispatcher(its_id)
                    && (its_handler = get_next_handler())) {
                 its_lock.unlock();
@@ -1686,8 +1693,8 @@ void application_impl::dispatch() {
     }
     if (is_dispatching_) {
         std::lock_guard<std::mutex> its_lock(dispatcher_mutex_);
-		// taikt: finish running on child thread, mark it as elapsed.
-		// this thread is exited.
+		// taikt: finish running on this worker thread, mark it as elapsed.
+		// this worked thread will be removed later (on remove_elapsed_dispatchers called by other worker)
         elapsed_dispatchers_.insert(its_id);
     }
     dispatcher_condition_.notify_all();
@@ -1773,10 +1780,14 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
     its_dispatcher_timer.async_wait([this, its_sync_handler](const boost::system::error_code &_error) {
         if (!_error) {
             print_blocking_call(its_sync_handler);
+            // taikt: if finding a free dispatcher in pool, awake up it to do job (it may be in sleeping (wait for condition))
             if (has_active_dispatcher()) {
                 std::lock_guard<std::mutex> its_lock(handlers_mutex_);
                 dispatcher_condition_.notify_all();
             } else {
+                // taikt: if cannot find any free dispatcher, need to create new one 
+                // (never create new dispachter if having available free dispatcher in pool)
+
                 // If possible, create a new dispatcher thread to unblock.
                 // If this is _not_ possible, dispatching is blocked until
                 // at least one of the active handler calls returns.
@@ -1820,6 +1831,7 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
 
     while (is_dispatching_ ) {
         if (dispatcher_mutex_.try_lock()) {
+            // taikt: add thread of current dispacher to running list before truely doing job
             running_dispatchers_.insert(its_id);
             dispatcher_mutex_.unlock();
             break;
@@ -1830,6 +1842,7 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
     if (is_dispatching_) {
         try {
 			VSOMEIP_INFO << "[taikt] trying to invoke handler start";
+            // doing job now
             _handler->handler_();
 			VSOMEIP_INFO << "[taikt] trying to invoke handler end";
         } catch (const std::exception &e) {
@@ -1840,10 +1853,12 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
     }
     boost::system::error_code ec;
 	VSOMEIP_INFO << "[taikt] cancel dispatcher timer";
+    // taikt: job return before timeout expired, cancel timer (no need create new dispacher in pool)
     its_dispatcher_timer.cancel(ec);
 
     while (is_dispatching_ ) {
         if (dispatcher_mutex_.try_lock()) {
+            // taikt: current dispacher finish job on time, remove it from the running list
             running_dispatchers_.erase(its_id);
             dispatcher_mutex_.unlock();
             return;
@@ -1852,12 +1867,23 @@ void application_impl::invoke_handler(std::shared_ptr<sync_handler> &_handler) {
     }
 }
 
+// taikt start
+//check exist of active worker dispatcher (it is free dispatcher, on sleeping state)
+// return true: if has one
+// return false: if no existing
+// means finding: a free worker dispatcher to do new job
+
+// running_dispatcher: is doing job
+// elapsed_dispatcher: finished job but has not removed, planed to be removed
+// dispachers: all worker threads pool (including running dispatchers, elapsed dispatchers, free(sleeping) dispachers)
+// taikt end
 bool application_impl::has_active_dispatcher() {
     while (is_dispatching_) {
         if (dispatcher_mutex_.try_lock()) {
-            for (const auto &d : dispatchers_) {
-                if (running_dispatchers_.find(d.first) == running_dispatchers_.end() &&
-                    elapsed_dispatchers_.find(d.first) == elapsed_dispatchers_.end()) {
+            for (const auto &d : dispatchers_) { // check every worker dispatcher in pool (list of dispachers_)
+                //d.first: thread id of worker dispatcher, d.second: thread running worker dispatcher
+                if (running_dispatchers_.find(d.first) == running_dispatchers_.end() &&  // not found thread id of worker dispatcher in running_dispatcher
+                    elapsed_dispatchers_.find(d.first) == elapsed_dispatchers_.end()) { // not found thread id of worker dispatcher in elapsed_dispatcher
                     dispatcher_mutex_.unlock();
                     return true;
                 }
@@ -1870,21 +1896,22 @@ bool application_impl::has_active_dispatcher() {
     return false;
 }
 
-// taikt: return true if thread is not running job or not an elapsed dispatcher.
-// return fail if either thread is running a job or a elapsed dispatcher (just done job)
+// taikt: return true if current thread enough condition to handle job
 bool application_impl::is_active_dispatcher(const std::thread::id &_id) {
     while (is_dispatching_) {
         if (dispatcher_mutex_.try_lock()) {
-            for (const auto &d : dispatchers_) {
-                if (d.first != _id &&
-                    running_dispatchers_.find(d.first) == running_dispatchers_.end() &&
-                    elapsed_dispatchers_.find(d.first) == elapsed_dispatchers_.end()) {
+            for (const auto &d : dispatchers_) { 
+                if (d.first != _id && // checked worker dispatcher differs current thread
+                    running_dispatchers_.find(d.first) == running_dispatchers_.end() && // checked worker dispatcher not in running list
+                    elapsed_dispatchers_.find(d.first) == elapsed_dispatchers_.end()) { // checked worker dispatcher not in elapsed list
                     dispatcher_mutex_.unlock();
-                    return false;
+                    return false; // if there is a free dispatcher in pool, which differ with current thread => return fail (this thread cannot do job, and will be moved to elapsed list)
+                                  // this to prevent case that: current thread has to take a lot of job, meanwhile other free worker do nothing
+                                  // to provide balance between workers? 
                 }
             }
             dispatcher_mutex_.unlock();
-            return true;
+            return true; // taikt: if every woker dispatcher in pool is busy, return true (this thread must do job)
         }
         std::this_thread::yield();
     }
